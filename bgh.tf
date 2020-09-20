@@ -1,6 +1,6 @@
 provider "aws" {
   region     = "ap-south-1"
-  profile    = "IAMUSER"
+  profile    = "xyz"
 }
 
 resource "aws_security_group" "security_group" {
@@ -61,7 +61,7 @@ resource "aws_instance" "instance1" {
 
 }
 
-/*resource "aws_ebs_volume" "taskvolume" {
+resource "aws_ebs_volume" "taskvolume" {
   availability_zone = aws_instance.instance1.availability_zone
   size              = 1
 
@@ -83,7 +83,12 @@ depends_on = [
     aws_volume_attachment.attachment,
   ]
 
-
+ connection {
+    type     = "ssh"
+    user     = "ec2-user"
+    private_key = file("C:/Users/DELL/Downloads/newkey.pem")
+    host     = aws_instance.instance1.public_ip
+  }
   
 
 provisioner "remote-exec" {
@@ -95,53 +100,9 @@ provisioner "remote-exec" {
     ]
   }
 }
-*/
-
-resource "aws_efs_file_system" "EFS_CREATE" {
-  creation_token = "EFS_CREATE"
-
-  tags = {
-    Name = "EFS_CREATE"
-  }
-depends_on = [
-aws_instance.instance1
-]
-}
-
-resource "aws_efs_mount_target" "EFS_MOUNT_TARGET" {
-  file_system_id = "${aws_efs_file_system.EFS_CREATE.id}"
-  subnet_id      = "${aws_instance.instance1.subnet_id}"
- security_groups = ["${aws_security_group.security_group.id}"]
 
 
-depends_on = [
-aws_efs_file_system.EFS_CREATE,aws_instance.instance1,aws_security_group.security_group
-]
-}
 
-
-#To mount EFS volume
-
-resource "null_resource" "nullremote" {
- depends_on = [
-  aws_efs_mount_target.EFS_MOUNT_TARGET,
- ]
- 
- connection {
-    type     = "ssh"
-    user     = "ec2-user"
-    private_key = file("C:/Users/DELL/Downloads/newkey.pem")
-    host     = aws_instance.instance1.public_ip
-  }
-
- provisioner "remote-exec" {
-  inline = [
-   "sudo mount -t nfs4 ${aws_efs_mount_target.EFS_MOUNT_TARGET.ip_address}:/ /var/www/html/",
-   "sudo rm -rf /var/www/html/*",
-   "sudo git clone https://github.com/deepikarao17/cloud_terraform.git /var/www/html/"
-  ]
- }
-}
 resource "aws_s3_bucket" "s3_bucket" {
   bucket = "bucket601"
   acl    = "public-read"
